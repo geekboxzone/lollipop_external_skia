@@ -635,7 +635,8 @@ LOCAL_SRC_FILES_x86 += \
 	src/opts/SkMorphology_opts_SSE2.cpp \
 	src/opts/SkUtils_opts_SSE2.cpp \
 	src/opts/SkXfermode_opts_SSE2.cpp \
-	src/opts/SkBitmapProcState_opts_SSSE3.cpp
+	src/opts/SkBitmapProcState_opts_SSSE3.cpp \
+	src/opts/SkBlitRow_opts_SSE4_asm.S
 
 LOCAL_CFLAGS_x86_64 += \
 	-msse4.2 \
@@ -652,7 +653,8 @@ LOCAL_SRC_FILES_x86_64 += \
 	src/opts/SkMorphology_opts_SSE2.cpp \
 	src/opts/SkUtils_opts_SSE2.cpp \
 	src/opts/SkXfermode_opts_SSE2.cpp \
-	src/opts/SkBitmapProcState_opts_SSSE3.cpp
+	src/opts/SkBitmapProcState_opts_SSSE3.cpp \
+	src/opts/SkBlitRow_opts_SSE4_x64_asm.S
 
 LOCAL_CFLAGS_mips += \
 	-EL
