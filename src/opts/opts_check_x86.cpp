@@ -13,6 +13,7 @@
 #include "SkBlitRow.h"
 #include "SkBlitRow_opts_SSE2.h"
 #include "SkBlurImage_opts_SSE2.h"
+#include "SkBlurImage_opts_SSE4.h"
 #include "SkMorphology_opts.h"
 #include "SkMorphology_opts_SSE2.h"
 #include "SkRTConf.h"
@@ -343,10 +344,13 @@ bool SkBoxBlurGetPlatformProcs(SkBoxBlurProc* boxBlurX,
 #ifdef SK_DISABLE_BLUR_DIVISION_OPTIMIZATION
     return false;
 #else
-    if (!supports_simd(SK_CPU_SSE_LEVEL_SSE2)) {
-        return false;
+    if (supports_simd(SK_CPU_SSE_LEVEL_SSE41)) {
+        return SkBoxBlurGetPlatformProcs_SSE4(boxBlurX, boxBlurY, boxBlurXY, boxBlurYX);
     }
-    return SkBoxBlurGetPlatformProcs_SSE2(boxBlurX, boxBlurY, boxBlurXY, boxBlurYX);
+    else if (supports_simd(SK_CPU_SSE_LEVEL_SSE2)) {
+        return SkBoxBlurGetPlatformProcs_SSE2(boxBlurX, boxBlurY, boxBlurXY, boxBlurYX);
+    }
+    return false;
 #endif
 }
 

@@ -631,6 +631,7 @@ LOCAL_SRC_FILES_x86 += \
 	src/opts/SkBlitRow_opts_SSE2.cpp \
 	src/opts/SkBlitRect_opts_SSE2.cpp \
 	src/opts/SkBlurImage_opts_SSE2.cpp \
+	src/opts/SkBlurImage_opts_SSE4.cpp \
 	src/opts/SkMorphology_opts_SSE2.cpp \
 	src/opts/SkUtils_opts_SSE2.cpp \
 	src/opts/SkXfermode_opts_SSE2.cpp \
@@ -647,6 +648,7 @@ LOCAL_SRC_FILES_x86_64 += \
 	src/opts/SkBlitRow_opts_SSE2.cpp \
 	src/opts/SkBlitRect_opts_SSE2.cpp \
 	src/opts/SkBlurImage_opts_SSE2.cpp \
+	src/opts/SkBlurImage_opts_SSE4.cpp \
 	src/opts/SkMorphology_opts_SSE2.cpp \
 	src/opts/SkUtils_opts_SSE2.cpp \
 	src/opts/SkXfermode_opts_SSE2.cpp \
