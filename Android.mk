@@ -619,7 +619,7 @@ LOCAL_CFLAGS_arm += \
 endif
 
 LOCAL_CFLAGS_x86 += \
-	-msse2 \
+	-mssse3 \
 	-mfpmath=sse
 
 LOCAL_SRC_FILES_x86 += \
@@ -635,7 +635,7 @@ LOCAL_SRC_FILES_x86 += \
 	src/opts/SkBitmapProcState_opts_SSSE3.cpp
 
 LOCAL_CFLAGS_x86_64 += \
-	-msse2 \
+	-msse4.2 \
 	-mfpmath=sse
 
 LOCAL_SRC_FILES_x86_64 += \
