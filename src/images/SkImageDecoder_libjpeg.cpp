@@ -546,7 +546,6 @@ static bool get_src_config(const jpeg_decompress_struct& cinfo,
 							hw_jpeg_VPUFreeLinear(&thumbPmem.thumbpmem);	\
 						}	\
 						}while(false)
-						
 #ifdef USE_HW_JPEG
 #define MAX_HARDWARE_SUPPORT_INPUT_SIZE ((1<<24)-1)//the same to vpu
 #endif
@@ -562,7 +561,7 @@ bool SkJPEGImageDecoder::onDecode(SkStream* stream, SkBitmap* bm, Mode mode) {
 	ReusePmem thumbPmem; //if hw decode thumbnail, reuse the thumb data in pmem, do not malloc vm
 	thumbPmem.reuse = 0;
 	AutoScaleBitmap thumbBitmap;   
-	//SkDebugf("JPEG HW Decode!");
+	HW_DEBUG("JPEG HW Decode!");
 do{
 		SkColorType colorType = this->getPrefColorType(k32Bit_SrcDepth, /*hasAlpha*/ false);
 		if (colorType != kN32_SkColorType &&
@@ -574,6 +573,7 @@ do{
 			WHLOG("out config: %d, is not support by hw.",config);
 			break;
 		}
+
 		size_t streamlen = stream->getLength();
 		if(streamlen > MAX_HARDWARE_SUPPORT_INPUT_SIZE){
 			WHLOG("input size is so large for hardware, jump to software at once.");
@@ -594,6 +594,9 @@ do{
 					break;		
 				}
 				stream = vpuStream;
+			} else {
+			    HW_DEBUG("===========goto jpeg soft decode,need to debug=======");
+			    goto __SOFT_DEC;
 			}
 		}
 		HwJpegInputInfo hwInfo;
@@ -627,7 +630,7 @@ do{
   		ppInfo->cropH = -1;
 		bm->lockPixels();
         JSAMPLE* rowptr = (JSAMPLE*)bm->getPixels();
-	HW_DEBUG("rowptr: %p, bm : %p", rowptr, bm);
+        HW_DEBUG("rowptr: %p, bm : %p", rowptr, bm);
         bm->unlockPixels();
         char reuseBitmap = (rowptr != NULL)?1:0;
 		if(reuseBitmap > 0 && colorType != bm->colorType()){
@@ -687,7 +690,6 @@ do{
 		} else {
 			if(hwInfo.justcaloutwh == 1){
 				HW_DEBUG("should not go to here.");
-				break;
 			}
 			HW_DEBUG("execte hw_jpeg_release #2");
 			hw_jpeg_release(outInfo.decoderHandle);
@@ -737,6 +739,8 @@ do{
 		}
 }while(0);
 #endif
+__SOFT_DEC:
+    HW_DEBUG("=====jpeg soft dec======");
     JPEGAutoClean autoClean;
 
     jpeg_decompress_struct  cinfo;
@@ -748,9 +752,9 @@ do{
     // All objects need to be instantiated before this setjmp call so that
     // they will be cleaned up properly if an error occurs.
     if (setjmp(errorManager.fJmpBuf)) {
-	#ifdef USE_HW_JPEG
-	   RELEASE_STREAM;
-	#endif
+    #ifdef USE_HW_JPEG
+       RELEASE_STREAM;
+    #endif
         return return_false(cinfo, *bm, "setjmp");
     }
 
@@ -759,9 +763,9 @@ do{
 
     int status = jpeg_read_header(&cinfo, true);
     if (status != JPEG_HEADER_OK) {
-	#ifdef USE_HW_JPEG
-	   RELEASE_STREAM;
-	#endif
+    #ifdef USE_HW_JPEG
+       RELEASE_STREAM;
+    #endif
         return return_false(cinfo, *bm, "read_header");
     }
 
@@ -883,6 +887,9 @@ do{
                 // so return early.  We will return a partial image.
                 fill_below_level(cinfo.output_scanline, bm);
                 cinfo.output_scanline = cinfo.output_height;
+                #ifdef USE_HW_JPEG
+                    RELEASE_STREAM;
+                #endif
                 break;  // Skip to jpeg_finish_decompress()
             }
             if (this->shouldCancelDecode()) {
@@ -913,6 +920,9 @@ do{
     }
 
     if (!sampler.begin(bm, sc, *this)) {
+    #ifdef USE_HW_JPEG
+        RELEASE_STREAM;
+    #endif
         return return_false(cinfo, *bm, "sampler.begin");
     }
 
