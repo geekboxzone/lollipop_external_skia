@@ -577,8 +577,8 @@ LOCAL_C_INCLUDES := \
 LOCAL_CFLAGS += -DUSE_HW_JPEG
 LOCAL_SRC_FILES += src/images/SkHwJpegUtility.cpp
 LOCAL_SHARED_LIBRARIES += libjpeghwdec
-LOCAL_C_INCLUDES += hardware/rk29/jpeghw/release/decoder_release \
-		hardware/rk29/libon2
+LOCAL_C_INCLUDES += hardware/rockchip/jpeghw/release/decoder_release \
+		hardware/rockchip/libon2
 #endif
 LOCAL_EXPORT_C_INCLUDE_DIRS := \
 	$(LOCAL_PATH)/include/config \
