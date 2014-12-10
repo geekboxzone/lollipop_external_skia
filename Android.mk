@@ -565,20 +565,13 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/src/pdf \
 	external/sfntly/cpp/src \
 	external/zlib
-#open this for test in the initial period of rk30
-#ifeq ($(TARGET_BOARD_HARDWARE), rk30board)
-#HAVE_LIBON2 := true
-#else
-#HAVE_LIBON2 := true 
-#true
-#endif
 
-#ifeq ($(HAVE_LIBON2), true)
+#ifeq ($(HAVE_LIBRKVPU), true)
 LOCAL_CFLAGS += -DUSE_HW_JPEG
 LOCAL_SRC_FILES += src/images/SkHwJpegUtility.cpp
 LOCAL_SHARED_LIBRARIES += libjpeghwdec
 LOCAL_C_INCLUDES += hardware/rockchip/jpeghw/release/decoder_release \
-		hardware/rockchip/libon2
+		hardware/rockchip/librkvpu
 #endif
 LOCAL_EXPORT_C_INCLUDE_DIRS := \
 	$(LOCAL_PATH)/include/config \
