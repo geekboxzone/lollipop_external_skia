@@ -247,7 +247,7 @@ protected:
     virtual bool onBuildTileIndex(SkStreamRewindable *stream, int *width, int *height) SK_OVERRIDE;
     virtual bool onDecodeSubset(SkBitmap* bitmap, const SkIRect& rect) SK_OVERRIDE;
 #endif
-    virtual bool onDecode(SkStream* stream, SkBitmap* bm, Mode) SK_OVERRIDE;
+    virtual Result onDecode(SkStream* stream, SkBitmap* bm, Mode) SK_OVERRIDE;
 
 private:
 #ifdef SK_BUILD_FOR_ANDROID
@@ -331,18 +331,33 @@ static bool skip_src_rows_tile(jpeg_decompress_struct* cinfo,
 }
 #endif
 
+///////////////////////////////////////////////////////////////////////////////
+
 // This guy exists just to aid in debugging, as it allows debuggers to just
 // set a break-point in one place to see all error exists.
-static bool return_false(const jpeg_decompress_struct& cinfo,
-                         const SkBitmap& bm, const char caller[]) {
+static void print_jpeg_decoder_errors(const jpeg_decompress_struct& cinfo,
+                         int width, int height, const char caller[]) {
     if (!(c_suppressJPEGImageDecoderErrors)) {
         char buffer[JMSG_LENGTH_MAX];
         cinfo.err->format_message((const j_common_ptr)&cinfo, buffer);
         SkDebugf("libjpeg error %d <%s> from %s [%d %d]\n",
-                 cinfo.err->msg_code, buffer, caller, bm.width(), bm.height());
+                 cinfo.err->msg_code, buffer, caller, width, height);
     }
-    return false;   // must always return false
 }
+
+static bool return_false(const jpeg_decompress_struct& cinfo,
+                         const SkBitmap& bm, const char caller[]) {
+    print_jpeg_decoder_errors(cinfo, bm.width(), bm.height(), caller);
+    return false;
+}
+
+static SkImageDecoder::Result return_failure(const jpeg_decompress_struct& cinfo,
+                                             const SkBitmap& bm, const char caller[]) {
+    print_jpeg_decoder_errors(cinfo, bm.width(), bm.height(), caller);
+    return SkImageDecoder::kFailure;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 // Convert a scanline of CMYK samples to RGBX in place. Note that this
 // method moves the "scanline" pointer in its processing
@@ -492,7 +507,6 @@ static void adjust_out_color_space_and_dither(jpeg_decompress_struct* cinfo,
 #endif
 }
 
-
 /**
    Sets all pixels in given bitmap to SK_ColorWHITE for all rows >= y.
    Used when decoding fails partway through reading scanlines to fill
@@ -550,7 +564,7 @@ static bool get_src_config(const jpeg_decompress_struct& cinfo,
 #define MAX_HARDWARE_SUPPORT_INPUT_SIZE ((1<<24)-1)//the same to vpu
 #endif
 
-bool SkJPEGImageDecoder::onDecode(SkStream* stream, SkBitmap* bm, Mode mode) {
+SkImageDecoder::Result SkJPEGImageDecoder::onDecode(SkStream* stream, SkBitmap* bm, Mode mode) {
     //SkDebugf("JPEG Decode!");
 #if defined(TIME_DECODE) || defined(DEBUG_HW_JPEG)
     AutoTimeMillis atm("JPEG Decode");
@@ -642,7 +656,7 @@ do{
 				if(vpuStream != NULL){
 					delete vpuStream;
 				}
-				return false;
+				return kFailure;
 			}			
 			HW_DEBUG("GO HARD DECODE, OUT WH: %d,%d", outInfo.outWidth,outInfo.outHeight);
 			if(!reuseBitmap){
@@ -656,7 +670,7 @@ do{
 							delete vpuStream;
 						}
                                                 HW_DEBUG("delete vpuStream return");
-						return false;
+						return kFailure;
 					}					
 				}
 				//bm->lockPixels();
@@ -686,7 +700,7 @@ do{
 				delete vpuStream;
 			}
 			//when just cal out wh, if next hardware error occurs, may have problem also, FIX this in future
-			return true;
+			return kSuccess;
 		} else {
 			if(hwInfo.justcaloutwh == 1){
 				HW_DEBUG("should not go to here.");
@@ -697,7 +711,7 @@ do{
 				if(vpuStream != NULL){
 					delete vpuStream;
 				}
-                return false;
+                return kFailure;
             }
 			if(hwInfo.streamCtl.useThumb && hwInfo.streamCtl.thumbLength > 0){
 				//construct thumb source stream
@@ -755,7 +769,7 @@ __SOFT_DEC:
     #ifdef USE_HW_JPEG
        RELEASE_STREAM;
     #endif
-        return return_false(cinfo, *bm, "setjmp");
+        return return_failure(cinfo, *bm, "setjmp");
     }
 
     initialize_info(&cinfo, &srcManager);
@@ -766,7 +780,7 @@ __SOFT_DEC:
     #ifdef USE_HW_JPEG
        RELEASE_STREAM;
     #endif
-        return return_false(cinfo, *bm, "read_header");
+        return return_failure(cinfo, *bm, "read_header");
     }
 
     /*  Try to fulfill the requested sampleSize. Since jpeg can do it (when it
@@ -793,12 +807,12 @@ __SOFT_DEC:
         // individual pixel. It is very unlikely to be opaque, since
         // an opaque A8 bitmap would not be very interesting.
         // Otherwise, a jpeg image is opaque.
-        return bm->setInfo(SkImageInfo::Make(cinfo.image_width, cinfo.image_height,
-                                             colorType, alphaType));
+        bool success = bm->setInfo(SkImageInfo::Make(cinfo.image_width, cinfo.image_height,
+                                                     colorType, alphaType));
 	#ifdef USE_HW_JPEG
 	    RELEASE_STREAM;
 	#endif
-        return true;
+        return success ? kSuccess : kFailure;
     }
 
     /*  image_width and image_height are the original dimensions, available
@@ -822,17 +836,17 @@ __SOFT_DEC:
             // individual pixel. It is very unlikely to be opaque, since
             // an opaque A8 bitmap would not be very interesting.
             // Otherwise, a jpeg image is opaque.
-            bool tmp = bm->setInfo(SkImageInfo::Make(smpl.scaledWidth(), smpl.scaledHeight(),
-                                                 colorType, alphaType));
+            bool success = bm->setInfo(SkImageInfo::Make(smpl.scaledWidth(), smpl.scaledHeight(),
+                                                         colorType, alphaType));
 	    #ifdef USE_HW_JPEG
 	        RELEASE_STREAM;
 	    #endif
-            return tmp;
+            return success ? kSuccess : kFailure;
         } else {
 	    #ifdef USE_HW_JPEG
 	        RELEASE_STREAM;
 	    #endif
-            return return_false(cinfo, *bm, "start_decompress");
+            return return_failure(cinfo, *bm, "start_decompress");
         }
     }
     sampleSize = recompute_sampleSize(sampleSize, cinfo);
@@ -843,7 +857,7 @@ __SOFT_DEC:
 	#ifdef USE_HW_JPEG
 	    RELEASE_STREAM;
 	#endif
-        return return_false(cinfo, *bm, "chooseFromOneChoice");
+        return return_failure(cinfo, *bm, "chooseFromOneChoice");
     }
 #endif
 
@@ -858,13 +872,13 @@ __SOFT_DEC:
 	#ifdef USE_HW_JPEG
 	    RELEASE_STREAM;
 	#endif
-        return true;
+        return kSuccess;
     }
     if (!this->allocPixelRef(bm, NULL)) {
 	#ifdef USE_HW_JPEG
 	    RELEASE_STREAM;
 	#endif
-        return return_false(cinfo, *bm, "allocPixelRef");
+        return return_failure(cinfo, *bm, "allocPixelRef");
     }
 
     SkAutoLockPixels alp(*bm);
@@ -887,16 +901,17 @@ __SOFT_DEC:
                 // so return early.  We will return a partial image.
                 fill_below_level(cinfo.output_scanline, bm);
                 cinfo.output_scanline = cinfo.output_height;
+                jpeg_finish_decompress(&cinfo);
                 #ifdef USE_HW_JPEG
                     RELEASE_STREAM;
                 #endif
-                break;  // Skip to jpeg_finish_decompress()
+                return kPartialSuccess;
             }
             if (this->shouldCancelDecode()) {
-		#ifdef USE_HW_JPEG
-			RELEASE_STREAM;
-		#endif
-                return return_false(cinfo, *bm, "shouldCancelDecode");
+                #ifdef USE_HW_JPEG
+                    RELEASE_STREAM;
+                #endif
+                return return_failure(cinfo, *bm, "shouldCancelDecode");
             }
             rowptr += bpr;
         }
@@ -904,7 +919,7 @@ __SOFT_DEC:
 	#ifdef USE_HW_JPEG
 	    RELEASE_STREAM;
 	#endif
-        return true;
+        return kSuccess;
     }
 #endif
 
@@ -916,14 +931,14 @@ __SOFT_DEC:
 	#ifdef USE_HW_JPEG
             RELEASE_STREAM;
 	#endif
-        return return_false(cinfo, *bm, "jpeg colorspace");
+        return return_failure(cinfo, *bm, "jpeg colorspace");
     }
 
     if (!sampler.begin(bm, sc, *this)) {
-    #ifdef USE_HW_JPEG
-        RELEASE_STREAM;
-    #endif
-        return return_false(cinfo, *bm, "sampler.begin");
+	#ifdef USE_HW_JPEG
+            RELEASE_STREAM;
+	#endif
+        return return_failure(cinfo, *bm, "sampler.begin");
     }
 
     SkAutoMalloc srcStorage(cinfo.output_width * srcBytesPerPixel);
@@ -934,7 +949,7 @@ __SOFT_DEC:
 	#ifdef USE_HW_JPEG
 	    RELEASE_STREAM;
 	#endif
-        return return_false(cinfo, *bm, "skip rows");
+        return return_failure(cinfo, *bm, "skip rows");
     }
 
     // now loop through scanlines until y == bm->height() - 1
@@ -946,13 +961,14 @@ __SOFT_DEC:
             // so return early.  We will return a partial image.
             fill_below_level(y, bm);
             cinfo.output_scanline = cinfo.output_height;
-            break;  // Skip to jpeg_finish_decompress()
+            jpeg_finish_decompress(&cinfo);
+            return kSuccess;
         }
         if (this->shouldCancelDecode()) {
             #ifdef USE_HW_JPEG
 	        RELEASE_STREAM;
 	    #endif
-            return return_false(cinfo, *bm, "shouldCancelDecode");
+            return return_failure(cinfo, *bm, "shouldCancelDecode");
         }
 
         if (JCS_CMYK == cinfo.out_color_space) {
@@ -969,7 +985,7 @@ __SOFT_DEC:
 	    #ifdef USE_HW_JPEG
 		RELEASE_STREAM;
 	    #endif
-            return return_false(cinfo, *bm, "skip rows");
+            return return_failure(cinfo, *bm, "skip rows");
         }
     }
 
@@ -979,15 +995,14 @@ __SOFT_DEC:
 	#ifdef USE_HW_JPEG
 	    RELEASE_STREAM;
 	#endif
-        return return_false(cinfo, *bm, "skip rows");
+        return return_failure(cinfo, *bm, "skip rows");
     }
     jpeg_finish_decompress(&cinfo);
 
-//    SkDebugf("------------------- bm2 size %d [%d %d] %d\n", bm->getSize(), bm->width(), bm->height(), bm->config());
 	#ifdef USE_HW_JPEG
-	   RELEASE_STREAM;
+	    RELEASE_STREAM;
 	#endif
-    return true;
+    return kSuccess;
 }
 
 #ifdef SK_BUILD_FOR_ANDROID
