@@ -535,7 +535,7 @@ LOCAL_STATIC_LIBRARIES := \
 ifeq ($(ADD_INTEL_SKIMAGEDECODER), true)
 LOCAL_STATIC_LIBRARIES += libskia_ext libjpeg-turbo-static libsimd \
 	libippj libippi libipps libippcore
-LOCAL_SHARED_LIBRARIES += libva libva-android libhardware libcutils libmix_imagedecoder libutils
+LOCAL_SHARED_LIBRARIES += libcutils libutils
 LOCAL_CFLAGS += -DADD_INTEL_SKIMAGEDECODER
 endif
 
