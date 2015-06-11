@@ -52,44 +52,22 @@ SkMemset32Proc SkMemset32GetPlatformProc() {
 #endif
 }
 
-void sk_set_pixel_row16_arm(uint32_t dst[], uint32_t color, int count, int totalCount) {
-    // Ignore totalCount since ARM doesn't support it yet.
-    sk_memset16(dst, color, count);
-}
-
-void sk_set_pixel_row32_arm(uint32_t dst[], uint32_t color, int count, int totalCount) {
-    // Ignore totalCount since ARM doesn't support it yet.
-    sk_memset32(dst, color, count);
-}
 
 SkSetPixelRow16Proc SkSetPixelRow16GetPlatformProc() {
-    return sk_set_pixel_row16_arm;
+    return NULL; //sk_set_pixel_row16_arm;
 }
 
 SkSetPixelRow32Proc SkSetPixelRow32GetPlatformProc() {
-    return sk_set_pixel_row32_arm;
+    return NULL;//sk_set_pixel_row32_arm;
 }
 
-void sk_set_pixel_rect16_arm(uint16_t dst[], uint32_t color, int width, int height, int rowBytes) {
-    while (--height >= 0) {
-        sk_memset16(dst, color, width);
-        dst = (uint16_t*)((char*)dst + rowBytes);
-    }
-}
-
-void sk_set_pixel_rect32_arm(uint32_t dst[], uint32_t color, int width, int height, int rowBytes) {
-    while (--height >= 0) {
-        sk_memset32(dst, color, width);
-        dst = (uint32_t*)((char*)dst + rowBytes);
-    }
-}
 
 SkSetPixelRect16Proc SkSetPixelRect16GetPlatformProc() {
-    return sk_set_pixel_rect16_arm;
+    return NULL;//sk_set_pixel_rect16_arm;
 }
 
 SkSetPixelRect32Proc SkSetPixelRect32GetPlatformProc() {
-    return sk_set_pixel_rect32_arm;
+    return NULL;//sk_set_pixel_rect32_arm;
 }
 
 SkMemcpy32Proc SkMemcpy32GetPlatformProc() {
