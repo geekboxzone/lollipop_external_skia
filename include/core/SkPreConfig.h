@@ -134,8 +134,12 @@
         #define SK_CPU_SSE_LEVEL    SK_CPU_SSE_LEVEL_SSE42
     #elif defined(__SSE4_1__)
         #define SK_CPU_SSE_LEVEL    SK_CPU_SSE_LEVEL_SSE41
-    #else
+    #elif defined(__SSSE3__)
         #define SK_CPU_SSE_LEVEL    SK_CPU_SSE_LEVEL_SSSE3
+    #elif defined(__SSE3__)
+        #define SK_CPU_SSE_LEVEL    SK_CPU_SSE_LEVEL_SSE3
+    #elif defined(__SSE2__)
+        #define SK_CPU_SSE_LEVEL    SK_CPU_SSE_LEVEL_SSE2
     #endif
 #endif
 
